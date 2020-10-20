@@ -1,0 +1,19 @@
+{
+  "name": "ap2021bot",
+  "version": "1.0.0",
+  "description": "A Slackbot for ap2021",
+  "main": "index.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ut-ap2021/ap2021bot.git"
+  },
+  "author": "settyan117",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/ut-ap2021/ap2021bot/issues"
+  },
+  "homepage": "https://github.com/ut-ap2021/ap2021bot#readme"
+}
