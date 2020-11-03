@@ -10,16 +10,27 @@ const token = process.env.SLACK_BOT_TOKEN as string;
 const rtm = new RTMClient(token);
 const slack = new WebClient(token);
 
-rtm.start();
-
-console.log("ap2021bot successfully started!");
-
-rtm.on("message", async (message) => {
-  console.log(message);
-  if (message.text === "hello") {
-    await slack.chat.postMessage({
-      text: "Hello world",
-      channel: process.env.CHANNEL_CONST as string,
-    });
-  }
+rtm.start().then(() => {
+  console.log("ap2021bot successfully started!");
 });
+
+const botNames: string[] = ["hitandblow"];
+
+const bots = Object.fromEntries(
+  botNames.map((name) => [
+    name,
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    require(`./${name}`) as (rtm: RTMClient, slack: WebClient) => void,
+  ])
+);
+
+const startBots = async () => {
+  await Promise.all(
+    Object.entries(bots).map(async ([name, startFunc]) => {
+      startFunc(rtm, slack);
+      console.log(`bot "${name}" successfully started!`);
+    })
+  );
+};
+
+startBots();
