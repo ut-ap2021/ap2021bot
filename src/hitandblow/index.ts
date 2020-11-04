@@ -57,7 +57,7 @@ const countBlow = (call: number[], answer: number[]) => {
   }
 };
 
-module.exports = (rtm: RTMClient, slack: WebClient) => {
+export default (rtm: RTMClient, slack: WebClient): void => {
   const state: HitAndBlowState = {
     answer: [],
     history: [],
