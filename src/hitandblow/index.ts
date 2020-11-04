@@ -110,7 +110,7 @@ module.exports = (rtm: RTMClient, slack: WebClient) => {
           typeof rawAnswerLength !== 'undefined'
             ? parseInt(rawAnswerLength)
             : 4;
-        if (answerLength <= 0 && 10 < answerLength) {
+        if (answerLength <= 0 || 10 < answerLength) {
           await slack.chat.postMessage({
             text: '桁数は1以上10以下で指定してね:thinking_face:',
             channel: process.env.CHANNEL_SANDBOX as string,
