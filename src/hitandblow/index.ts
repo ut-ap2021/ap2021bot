@@ -149,17 +149,14 @@ module.exports = (rtm: RTMClient, slack: WebClient) => {
       }
     }
 
-    // call処理
-    if (message.text.match(/^call +\d+$/)) {
-      if (message.thread_ts !== state.thread) {
-        return;
-      } else {
+    // ゲーム中のスレッドでのみ反応
+    if (message.thread_ts === state.thread) {
+      // call処理
+      if (message.text.match(/^\d+$/)) {
         if (!state.inGame) {
           return;
         }
-        const call = [
-          ...message.text.match(/^call +(\d+)$/)[1],
-        ].map((dig: string) => parseInt(dig));
+        const call = [...message.text].map((dig: string) => parseInt(dig));
         if (call.length !== state.answer.length) {
           await slack.chat.postMessage({
             text: `桁数が違うよ:thinking_face: (${state.answer.length}桁)`,
@@ -172,7 +169,7 @@ module.exports = (rtm: RTMClient, slack: WebClient) => {
           if (!isValidCall(call)) {
             await slack.chat.postMessage({
               text:
-                'call中に同じ数字を2個以上含めることはできないよ:thinking_face:',
+                'コール中に同じ数字を2個以上含めることはできないよ:thinking_face:',
               channel: process.env.CHANNEL_SANDBOX as string,
               username: 'Hit & Blow',
               icon_emoji: '1234',
@@ -214,13 +211,30 @@ module.exports = (rtm: RTMClient, slack: WebClient) => {
           }
         }
       }
-    }
 
-    // history処理
-    if (message.text.match(/^(history|コール履歴)$/)) {
-      if (message.thread_ts !== state.thread) {
-        return;
-      } else {
+      // ギブアップ処理
+      if (message.text.match(/^(giveup|ギブアップ)$/)) {
+        await slack.chat.postMessage({
+          text: stripIndent`
+          正解者は出ませんでした:sob:
+          答えは \`${state.answer
+            .map((dig: number) => String(dig))
+            .join('')}\` だよ:cry:`,
+          channel: process.env.CHANNEL_SANDBOX as string,
+          username: 'Hit & Blow',
+          icon_emoji: '1234',
+          thread_ts: state.thread,
+          reply_broadcast: true,
+        });
+        postHistory(state.history);
+        state.answer = [];
+        state.history = [];
+        state.thread = undefined;
+        state.inGame = false;
+      }
+
+      // history処理
+      if (message.text.match(/^(history|コール履歴)$/)) {
         postHistory(state.history);
       }
     }
