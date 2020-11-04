@@ -145,7 +145,6 @@ module.exports = (rtm: RTMClient, slack: WebClient) => {
             icon_emoji: '1234',
           });
           state.thread = ts as string;
-          console.log(state.answer);
         }
       }
     }
