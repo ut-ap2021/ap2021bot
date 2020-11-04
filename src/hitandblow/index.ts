@@ -64,12 +64,23 @@ module.exports = (rtm: RTMClient, slack: WebClient) => {
     thread: undefined,
     inGame: false,
   };
+
+  // call履歴をpostする関数
   const postHistory = async (
     history: { call: number[]; hits: number; blows: number }[]
   ) => {
-    await slack.chat.postMessage({
-      text: stripIndent`
-      call履歴 \`\`\`${history
+    if (history.length === 0) {
+      await slack.chat.postMessage({
+        text: 'コール履歴: なし',
+        channel: process.env.CHANNEL_SANDBOX as string,
+        username: 'Hit & Blow',
+        icon_emoji: '1234',
+        thread_ts: state.thread,
+      });
+    } else {
+      await slack.chat.postMessage({
+        text: stripIndent`
+      コール履歴: \`\`\`${history
         .map(
           (hist: { call: number[]; hits: number; blows: number }) =>
             stripIndent`
@@ -79,9 +90,12 @@ module.exports = (rtm: RTMClient, slack: WebClient) => {
         )
         .join('\n')}\`\`\`
       `,
-      channel: process.env.CHANNEL_SANDBOX as string,
-      thread_ts: state.thread,
-    });
+        channel: process.env.CHANNEL_SANDBOX as string,
+        username: 'Hit & Blow',
+        icon_emoji: '1234',
+        thread_ts: state.thread,
+      });
+    }
   };
   rtm.on('message', async (message) => {
     if (message.channel !== process.env.CHANNEL_SANDBOX) {
@@ -100,6 +114,8 @@ module.exports = (rtm: RTMClient, slack: WebClient) => {
         await slack.chat.postMessage({
           text: '進行中のゲームがあるよ:thinking_face:',
           channel: process.env.CHANNEL_SANDBOX as string,
+          username: 'Hit & Blow',
+          icon_emoji: '1234',
           thread_ts: state.thread,
           reply_broadcast: true,
         });
@@ -114,6 +130,8 @@ module.exports = (rtm: RTMClient, slack: WebClient) => {
           await slack.chat.postMessage({
             text: '桁数は1以上10以下で指定してね:thinking_face:',
             channel: process.env.CHANNEL_SANDBOX as string,
+            username: 'Hit & Blow',
+            icon_emoji: '1234',
           });
         } else {
           state.inGame = true;
@@ -123,6 +141,8 @@ module.exports = (rtm: RTMClient, slack: WebClient) => {
             Hit & Blow (${state.answer.length}桁) を開始します。
             スレッドに「call hoge」とコールしてね`,
             channel: process.env.CHANNEL_SANDBOX as string,
+            username: 'Hit & Blow',
+            icon_emoji: '1234',
           });
           state.thread = ts as string;
           console.log(state.answer);
@@ -145,6 +165,8 @@ module.exports = (rtm: RTMClient, slack: WebClient) => {
           await slack.chat.postMessage({
             text: `桁数が違うよ:thinking_face: (${state.answer.length}桁)`,
             channel: process.env.CHANNEL_SANDBOX as string,
+            username: 'Hit & Blow',
+            icon_emoji: '1234',
             thread_ts: state.thread,
           });
         } else {
@@ -153,6 +175,8 @@ module.exports = (rtm: RTMClient, slack: WebClient) => {
               text:
                 'call中に同じ数字を2個以上含めることはできないよ:thinking_face:',
               channel: process.env.CHANNEL_SANDBOX as string,
+              username: 'Hit & Blow',
+              icon_emoji: '1234',
               thread_ts: state.thread,
             });
           } else {
@@ -165,6 +189,8 @@ module.exports = (rtm: RTMClient, slack: WebClient) => {
                 .map((dig: number) => String(dig))
                 .join('')}\`: ${hits} Hit ${blows} Blow`,
               channel: process.env.CHANNEL_SANDBOX as string,
+              username: 'Hit & Blow',
+              icon_emoji: '1234',
               thread_ts: state.thread,
             });
             if (hits === state.answer.length) {
@@ -175,6 +201,8 @@ module.exports = (rtm: RTMClient, slack: WebClient) => {
                   .map((dig: number) => String(dig))
                   .join('')}\` だよ:muscle:`,
                 channel: process.env.CHANNEL_SANDBOX as string,
+                username: 'Hit & Blow',
+                icon_emoji: '1234',
                 thread_ts: state.thread,
                 reply_broadcast: true,
               });
@@ -190,7 +218,7 @@ module.exports = (rtm: RTMClient, slack: WebClient) => {
     }
 
     // history処理
-    if (message.text.match(/^history$/)) {
+    if (message.text.match(/^(history|コール履歴)$/)) {
       if (message.thread_ts !== state.thread) {
         return;
       } else {
