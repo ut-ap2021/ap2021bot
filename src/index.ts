@@ -1,6 +1,6 @@
-import { RTMClient } from "@slack/rtm-api";
-import { WebClient } from "@slack/web-api";
-import dotenv from "dotenv";
+import { RTMClient } from '@slack/rtm-api';
+import { WebClient } from '@slack/web-api';
+import dotenv from 'dotenv';
 dotenv.config();
 
 // Read a token from the environment variables
@@ -11,10 +11,10 @@ const rtm = new RTMClient(token);
 const slack = new WebClient(token);
 
 rtm.start().then(() => {
-  console.log("ap2021bot successfully started!");
+  console.log('ap2021bot successfully started!');
 });
 
-const botNames: string[] = ["hitandblow"];
+const botNames: string[] = ['hitandblow'];
 
 const bots = Object.fromEntries(
   botNames.map((name) => [
