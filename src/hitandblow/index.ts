@@ -2,16 +2,30 @@ import { RTMClient } from '@slack/rtm-api';
 import { WebClient } from '@slack/web-api';
 import { range, shuffle } from 'lodash';
 import { stripIndent } from 'common-tags';
+import assert from 'assert';
 
-interface HitAndBlowState {
-  answer: number[];
-  history: { call: number[]; hitsCount: number; blowsCount: number }[];
-  thread?: string;
-  inGame: boolean;
+interface HitAndBlowHistory {
+  call: number[];
+  hitsCount: number;
+  blowsCount: number;
+}
+
+class HitAndBlowState {
+  answer: number[] = [];
+  history: HitAndBlowHistory[] = [];
+  thread?: string = undefined;
+  inGame = false;
+  clear() {
+    this.answer = [];
+    this.history = [];
+    this.thread = undefined;
+    this.inGame = false;
+    return;
+  }
 }
 
 const isValidCall = (call: number[]) => {
-  const numDict = Array<number>(10);
+  const numDict = Array<number>(10).fill(0);
   for (let i = 0; i < call.length; i++) {
     if (numDict[call[i]] >= 1) {
       return false;
@@ -22,53 +36,55 @@ const isValidCall = (call: number[]) => {
 };
 
 const countHit = (call: number[], answer: number[]) => {
-  if (call.length !== answer.length) {
-    throw new Error('Length of the call does not match the answer.');
-  } else {
-    const hits = new Set<number>();
-    for (let i = 0; i < call.length; i++) {
-      if (call[i] === answer[i]) {
-        hits.add(call[i]);
-      }
+  assert(call.length === answer.length);
+  const hits = new Set<number>();
+  for (let i = 0; i < call.length; i++) {
+    if (call[i] === answer[i]) {
+      hits.add(call[i]);
     }
-    return hits;
   }
+  return hits;
 };
 
 // Hitも合わせて数える
 const countBlow = (call: number[], answer: number[]) => {
-  if (call.length !== answer.length) {
-    throw new Error('Length of the call does not match the answer.');
-  } else {
-    const blows = new Set<number>();
-    const callArray = Array<number>(10);
-    const ansArray = Array<number>(10);
-    for (let i = 0; i < 10; i++) {
-      callArray[i] = ansArray[i] = 0;
-    }
-    for (let i = 0; i < call.length; i++) {
-      callArray[call[i]]++;
-      ansArray[answer[i]]++;
-    }
-    for (let i = 0; i < 10; i++) {
-      if (Math.min(callArray[i], ansArray[i]) >= 1) {
-        blows.add(i);
-      }
-    }
-    return blows;
+  assert(call.length === answer.length);
+  const blows = new Set<number>();
+  const callArray = Array<number>(10).fill(0);
+  const ansArray = Array<number>(10).fill(0);
+  for (let i = 0; i < call.length; i++) {
+    callArray[call[i]]++;
+    ansArray[answer[i]]++;
   }
+  for (let i = 0; i < 10; i++) {
+    if (Math.min(callArray[i], ansArray[i]) >= 1) {
+      blows.add(i);
+    }
+  }
+  return blows;
 };
 
-export default (rtm: RTMClient, slack: WebClient): void => {
-  const state: HitAndBlowState = {
-    answer: [],
-    history: [],
-    thread: undefined,
-    inGame: false,
-  };
+const generateHistoryString = ({
+  call,
+  hitsCount,
+  blowsCount,
+}: HitAndBlowHistory) => {
+  return `${call
+    .map((dig: number) => String(dig))
+    .join('')}: ${hitsCount} Hit ${blowsCount} Blow`;
+};
+
+module.exports = ({
+  rtmClient: rtm,
+  webClient: slack,
+}: {
+  rtmClient: RTMClient;
+  webClient: WebClient;
+}): void => {
+  const state = new HitAndBlowState();
 
   // call履歴をpostする関数
-  const postHistory = async (history: HitAndBlowState['history']) => {
+  const postHistory = async (history: HitAndBlowHistory[]) => {
     if (history.length === 0) {
       await slack.chat.postMessage({
         text: 'コール履歴: なし',
@@ -81,13 +97,7 @@ export default (rtm: RTMClient, slack: WebClient): void => {
       await slack.chat.postMessage({
         text: stripIndent`
       コール履歴: \`\`\`${history
-        .map(
-          (hist: { call: number[]; hitsCount: number; blowsCount: number }) =>
-            stripIndent`
-          ${hist.call.map((dig: number) => String(dig)).join('')}: ${
-              hist.hitsCount
-            } Hit ${hist.blowsCount} Blow`
-        )
+        .map((hist: HitAndBlowHistory) => generateHistoryString(hist))
         .join('\n')}\`\`\`
       `,
         channel: process.env.CHANNEL_SANDBOX as string,
@@ -97,11 +107,15 @@ export default (rtm: RTMClient, slack: WebClient): void => {
       });
     }
   };
+
   rtm.on('message', async (message) => {
     if (message.channel !== process.env.CHANNEL_SANDBOX) {
       return;
     }
-    if (message.subtype === 'bot_message') {
+    if (
+      message.subtype === 'bot_message' ||
+      message.subtype === 'slackbot_response'
+    ) {
       return;
     }
     if (!message.text) {
@@ -123,9 +137,7 @@ export default (rtm: RTMClient, slack: WebClient): void => {
       } else {
         const rawAnswerLength = message.text.match(/^hitandblow( \d+)?$/)[1];
         const answerLength =
-          typeof rawAnswerLength !== 'undefined'
-            ? parseInt(rawAnswerLength)
-            : 4;
+          rawAnswerLength !== undefined ? parseInt(rawAnswerLength) : 4;
         if (answerLength <= 0 || 10 < answerLength) {
           await slack.chat.postMessage({
             text: '桁数は1以上10以下で指定してね:thinking_face:',
@@ -139,7 +151,7 @@ export default (rtm: RTMClient, slack: WebClient): void => {
           const { ts } = await slack.chat.postMessage({
             text: stripIndent`
             Hit & Blow (${state.answer.length}桁) を開始します。
-            スレッドに「call hoge」とコールしてね`,
+            スレッドに数字でコールしてね`,
             channel: process.env.CHANNEL_SANDBOX as string,
             username: 'Hit & Blow',
             icon_emoji: '1234',
@@ -157,6 +169,7 @@ export default (rtm: RTMClient, slack: WebClient): void => {
           return;
         }
         const call = [...message.text].map((dig: string) => parseInt(dig));
+
         if (call.length !== state.answer.length) {
           await slack.chat.postMessage({
             text: `桁数が違うよ:thinking_face: (${state.answer.length}桁)`,
@@ -184,15 +197,17 @@ export default (rtm: RTMClient, slack: WebClient): void => {
               hitsCount: hits.size,
               blowsCount: blows.size - hits.size,
             });
+
             await slack.chat.postMessage({
               text: `\`${call.map((dig: number) => String(dig)).join('')}\`: ${
                 hits.size
-              } Hit ${blows.size} Blow`,
+              } Hit ${blows.size - hits.size} Blow`, // ここもgenerateHistoryStringとまとめようと思ったけど、ここ一箇所のために``用の分岐を入れるのもなんか違う気がしてる
               channel: process.env.CHANNEL_SANDBOX as string,
               username: 'Hit & Blow',
               icon_emoji: '1234',
               thread_ts: state.thread,
             });
+
             if (hits.size === state.answer.length) {
               await slack.chat.postMessage({
                 text: stripIndent`
@@ -207,10 +222,9 @@ export default (rtm: RTMClient, slack: WebClient): void => {
                 reply_broadcast: true,
               });
               postHistory(state.history);
-              state.answer = [];
-              state.history = [];
-              state.thread = undefined;
-              state.inGame = false;
+
+              // 終了処理
+              state.clear();
             }
           }
         }
@@ -231,10 +245,9 @@ export default (rtm: RTMClient, slack: WebClient): void => {
           reply_broadcast: true,
         });
         postHistory(state.history);
-        state.answer = [];
-        state.history = [];
-        state.thread = undefined;
-        state.inGame = false;
+
+        // 終了処理
+        state.clear();
       }
 
       // history処理
@@ -254,7 +267,7 @@ export default (rtm: RTMClient, slack: WebClient): void => {
           channel: process.env.CHANNEL_SANDBOX as string,
           username: 'Hit & Blow',
           icon_emoji: '1234',
-          thread_ts: message.thread_ts,
+          thread_ts: message.ts,
         });
       } else {
         if (!isValidCall(call1) || !isValidCall(call2)) {
@@ -263,7 +276,7 @@ export default (rtm: RTMClient, slack: WebClient): void => {
             channel: process.env.CHANNEL_SANDBOX as string,
             username: 'Hit & Blow',
             icon_emoji: '1234',
-            thread_ts: message.thread_ts,
+            thread_ts: message.ts,
           });
         } else {
           const hits = countHit(call1, call2);
@@ -280,7 +293,7 @@ export default (rtm: RTMClient, slack: WebClient): void => {
                   return `~${dig}~`;
                 }
               })
-              .join('')}
+              .join(' ')}
             ${call2
               .map((dig) => {
                 if (hits.has(dig)) {
@@ -291,12 +304,12 @@ export default (rtm: RTMClient, slack: WebClient): void => {
                   return `~${dig}~`;
                 }
               })
-              .join('')}
+              .join(' ')}
             `,
             channel: process.env.CHANNEL_SANDBOX as string,
             username: 'Hit & Blow',
             icon_emoji: '1234',
-            thread_ts: message.thread_ts,
+            thread_ts: message.ts,
           });
         }
       }

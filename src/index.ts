@@ -20,14 +20,17 @@ const bots = Object.fromEntries(
   botNames.map((name: string) => [
     name,
     // eslint-disable-next-line @typescript-eslint/no-var-requires
-    require(`./${name}`) as (rtm: RTMClient, slack: WebClient) => void,
+    require(`./${name}`) as (arg0: {
+      rtmClient: RTMClient;
+      webClient: WebClient;
+    }) => void,
   ])
 );
 
 const startBots = async () => {
   await Promise.all(
     Object.entries(bots).map(async ([name, startFunc]) => {
-      startFunc(rtm, slack);
+      startFunc({ rtmClient: rtm, webClient: slack });
       console.log(`bot "${name}" successfully started!`);
     })
   );
