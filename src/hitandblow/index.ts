@@ -5,7 +5,7 @@ import { stripIndent } from 'common-tags';
 
 interface HitAndBlowState {
   answer: number[];
-  history: { call: number[]; hits: number; blows: number }[];
+  history: { call: number[]; hitsCount: number; blowsCount: number }[];
   thread?: string;
   inGame: boolean;
 }
@@ -25,13 +25,13 @@ const countHit = (call: number[], answer: number[]) => {
   if (call.length !== answer.length) {
     throw new Error('Length of the call does not match the answer.');
   } else {
-    let count = 0;
+    const hits = new Set<number>();
     for (let i = 0; i < call.length; i++) {
       if (call[i] === answer[i]) {
-        count++;
+        hits.add(call[i]);
       }
     }
-    return count;
+    return hits;
   }
 };
 
@@ -40,7 +40,7 @@ const countBlow = (call: number[], answer: number[]) => {
   if (call.length !== answer.length) {
     throw new Error('Length of the call does not match the answer.');
   } else {
-    let count = 0;
+    const blows = new Set<number>();
     const callArray = Array<number>(10);
     const ansArray = Array<number>(10);
     for (let i = 0; i < 10; i++) {
@@ -51,9 +51,11 @@ const countBlow = (call: number[], answer: number[]) => {
       ansArray[answer[i]]++;
     }
     for (let i = 0; i < 10; i++) {
-      count += Math.min(callArray[i], ansArray[i]);
+      if (Math.min(callArray[i], ansArray[i]) >= 1) {
+        blows.add(i);
+      }
     }
-    return count;
+    return blows;
   }
 };
 
@@ -66,9 +68,7 @@ export default (rtm: RTMClient, slack: WebClient): void => {
   };
 
   // call履歴をpostする関数
-  const postHistory = async (
-    history: { call: number[]; hits: number; blows: number }[]
-  ) => {
+  const postHistory = async (history: HitAndBlowState['history']) => {
     if (history.length === 0) {
       await slack.chat.postMessage({
         text: 'コール履歴: なし',
@@ -82,11 +82,11 @@ export default (rtm: RTMClient, slack: WebClient): void => {
         text: stripIndent`
       コール履歴: \`\`\`${history
         .map(
-          (hist: { call: number[]; hits: number; blows: number }) =>
+          (hist: { call: number[]; hitsCount: number; blowsCount: number }) =>
             stripIndent`
           ${hist.call.map((dig: number) => String(dig)).join('')}: ${
-              hist.hits
-            } Hit ${hist.blows} Blow`
+              hist.hitsCount
+            } Hit ${hist.blowsCount} Blow`
         )
         .join('\n')}\`\`\`
       `,
@@ -178,18 +178,22 @@ export default (rtm: RTMClient, slack: WebClient): void => {
           } else {
             // validなcallの場合
             const hits = countHit(call, state.answer);
-            const blows = countBlow(call, state.answer) - hits;
-            state.history.push({ call, hits, blows });
+            const blows = countBlow(call, state.answer);
+            state.history.push({
+              call,
+              hitsCount: hits.size,
+              blowsCount: blows.size - hits.size,
+            });
             await slack.chat.postMessage({
-              text: `\`${call
-                .map((dig: number) => String(dig))
-                .join('')}\`: ${hits} Hit ${blows} Blow`,
+              text: `\`${call.map((dig: number) => String(dig)).join('')}\`: ${
+                hits.size
+              } Hit ${blows.size} Blow`,
               channel: process.env.CHANNEL_SANDBOX as string,
               username: 'Hit & Blow',
               icon_emoji: '1234',
               thread_ts: state.thread,
             });
-            if (hits === state.answer.length) {
+            if (hits.size === state.answer.length) {
               await slack.chat.postMessage({
                 text: stripIndent`
                 <@${message.user}> 正解です:tada:
@@ -236,6 +240,65 @@ export default (rtm: RTMClient, slack: WebClient): void => {
       // history処理
       if (message.text.match(/^(history|コール履歴)$/)) {
         postHistory(state.history);
+      }
+    }
+
+    // 支援機能
+    if (message.text.match(/^hbdiff \d+ \d+$/)) {
+      const [, rawCall1, rawCall2] = message.text.match(/^hbdiff (\d+) (\d+)$/);
+      const call1 = [...rawCall1].map((dig: string) => parseInt(dig));
+      const call2 = [...rawCall2].map((dig: string) => parseInt(dig));
+      if (call1.length !== call2.length) {
+        await slack.chat.postMessage({
+          text: `桁数が違うので比較できないよ:cry:`,
+          channel: process.env.CHANNEL_SANDBOX as string,
+          username: 'Hit & Blow',
+          icon_emoji: '1234',
+          thread_ts: message.thread_ts,
+        });
+      } else {
+        if (!isValidCall(call1) || !isValidCall(call2)) {
+          await slack.chat.postMessage({
+            text: 'どちらかのコール中に同じ数字が含まれているよ:cry:',
+            channel: process.env.CHANNEL_SANDBOX as string,
+            username: 'Hit & Blow',
+            icon_emoji: '1234',
+            thread_ts: message.thread_ts,
+          });
+        } else {
+          const hits = countHit(call1, call2);
+          const blows = countBlow(call1, call2);
+          await slack.chat.postMessage({
+            text: stripIndent`
+            >>>${call1
+              .map((dig) => {
+                if (hits.has(dig)) {
+                  return `*${dig}*`;
+                } else if (blows.has(dig)) {
+                  return `_${dig}_`;
+                } else {
+                  return `~${dig}~`;
+                }
+              })
+              .join('')}
+            ${call2
+              .map((dig) => {
+                if (hits.has(dig)) {
+                  return `*${dig}*`;
+                } else if (blows.has(dig)) {
+                  return `_${dig}_`;
+                } else {
+                  return `~${dig}~`;
+                }
+              })
+              .join('')}
+            `,
+            channel: process.env.CHANNEL_SANDBOX as string,
+            username: 'Hit & Blow',
+            icon_emoji: '1234',
+            thread_ts: message.thread_ts,
+          });
+        }
       }
     }
   });
