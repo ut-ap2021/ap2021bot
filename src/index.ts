@@ -17,7 +17,7 @@ rtm.start().then(() => {
 const botNames: string[] = ['hitandblow'];
 
 const bots = Object.fromEntries(
-  botNames.map((name) => [
+  botNames.map((name: string) => [
     name,
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     require(`./${name}`) as (rtm: RTMClient, slack: WebClient) => void,
