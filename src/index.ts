@@ -47,7 +47,3 @@ slack.chat.postMessage({
   channel: process.env.CHANNEL_SANDBOX as string,
   text: startupMessage,
 });
-
-rtm.on('message', (message) => {
-  console.log(message);
-});
