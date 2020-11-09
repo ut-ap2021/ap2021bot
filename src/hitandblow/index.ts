@@ -1,6 +1,6 @@
 import { RTMClient } from '@slack/rtm-api';
 import { WebClient } from '@slack/web-api';
-import { range, shuffle } from 'lodash';
+import { range, shuffle, round } from 'lodash';
 import { stripIndent } from 'common-tags';
 import assert from 'assert';
 
@@ -13,12 +13,19 @@ interface HitAndBlowHistory {
 class HitAndBlowState {
   answer: number[] = [];
   history: HitAndBlowHistory[] = [];
-  thread?: string = undefined;
+  thread: string | null = null;
+  startDate: number | null = null;
+  timer: NodeJS.Timeout | null = null;
   inGame = false;
   clear() {
     this.answer = [];
     this.history = [];
-    this.thread = undefined;
+    this.thread = null;
+    this.startDate = null;
+    if (this.timer) {
+      clearTimeout(this.timer);
+    }
+    this.timer = null;
     this.inGame = false;
     return;
   }
@@ -74,7 +81,11 @@ const generateHistoryString = ({
     .join('')}: ${hitsCount} Hit ${blowsCount} Blow`;
 };
 
-module.exports = ({
+const answerLength2TimeLimit = (answerLength: number) => {
+  return answerLength * 3 * 60 * 1000;
+};
+
+export default ({
   rtmClient: rtm,
   webClient: slack,
 }: {
@@ -85,7 +96,9 @@ module.exports = ({
 
   // call履歴をpostする関数
   const postHistory = async (history: HitAndBlowHistory[]) => {
+    assert(state.thread !== null);
     if (history.length === 0) {
+      //if (!state.thread) return;
       await slack.chat.postMessage({
         text: 'コール履歴: なし',
         channel: process.env.CHANNEL_SANDBOX as string,
@@ -108,6 +121,34 @@ module.exports = ({
     }
   };
 
+  // タイムアップ処理
+  const timeUp = async () => {
+    assert(state.thread !== null);
+    await slack.chat.postMessage({
+      text: '～～～～～～～～～～おわり～～～～～～～～～～',
+      channel: process.env.CHANNEL_SANDBOX as string,
+      username: 'Hit & Blow',
+      icon_emoji: '1234',
+      thread_ts: state.thread,
+    });
+    await slack.chat.postMessage({
+      text: stripIndent`
+          正解者は出ませんでした:sob:
+          答えは \`${state.answer
+            .map((dig: number) => String(dig))
+            .join('')}\` だよ:cry:`,
+      channel: process.env.CHANNEL_SANDBOX as string,
+      username: 'Hit & Blow',
+      icon_emoji: '1234',
+      thread_ts: state.thread,
+      reply_broadcast: true,
+    });
+    postHistory(state.history);
+
+    // 終了処理
+    state.clear();
+  };
+
   rtm.on('message', async (message) => {
     if (message.channel !== process.env.CHANNEL_SANDBOX) {
       return;
@@ -125,6 +166,7 @@ module.exports = ({
     // game開始処理
     if (message.text.match(/^hitandblow( \d+)?$/)) {
       if (state.inGame) {
+        assert(state.thread !== null);
         await slack.chat.postMessage({
           text: '進行中のゲームがあるよ:thinking_face:',
           channel: process.env.CHANNEL_SANDBOX as string,
@@ -157,12 +199,23 @@ module.exports = ({
             icon_emoji: '1234',
           });
           state.thread = ts as string;
+          state.startDate = Date.now();
+          const timeLimit = answerLength2TimeLimit(answerLength);
+          state.timer = setTimeout(timeUp, timeLimit);
+          await slack.chat.postMessage({
+            text: `制限時間は${timeLimit / 1000 / 60}分です`,
+            channel: process.env.CHANNEL_SANDBOX as string,
+            username: 'Hit & Blow',
+            icon_emoji: '1234',
+            thread_ts: state.thread,
+          });
         }
       }
     }
 
     // ゲーム中のスレッドでのみ反応
     if (message.thread_ts === state.thread) {
+      assert(state.thread !== null);
       // call処理
       if (message.text.match(/^\d+$/)) {
         if (!state.inGame) {
@@ -209,12 +262,15 @@ module.exports = ({
             });
 
             if (hits.size === state.answer.length) {
+              assert(state.startDate !== null);
+              const passedTime = Date.now() - state.startDate;
               await slack.chat.postMessage({
                 text: stripIndent`
                 <@${message.user}> 正解です:tada:
                 答えは \`${state.answer
                   .map((dig: number) => String(dig))
-                  .join('')}\` だよ:muscle:`,
+                  .join('')}\` だよ:muscle:
+                経過時間: ${round(passedTime / 1000, 2).toFixed(2)}秒`,
                 channel: process.env.CHANNEL_SANDBOX as string,
                 username: 'Hit & Blow',
                 icon_emoji: '1234',
@@ -231,6 +287,7 @@ module.exports = ({
       }
 
       // ギブアップ処理
+      /*
       if (message.text.match(/^(giveup|ギブアップ)$/)) {
         await slack.chat.postMessage({
           text: stripIndent`
@@ -249,6 +306,7 @@ module.exports = ({
         // 終了処理
         state.clear();
       }
+      */
 
       // history処理
       if (message.text.match(/^(history|コール履歴)$/)) {
