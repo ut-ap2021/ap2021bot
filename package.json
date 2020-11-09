@@ -5,6 +5,7 @@
   "description": "A Slackbot for ap2021",
   "main": "src/index.ts",
   "scripts": {
+    "start": "ts-node src/index.ts",
     "dev": "nodemon -x ts-node -e js,ts src/index.ts -i \"*.json\"",
     "test": "jest"
   },

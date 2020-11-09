@@ -20,7 +20,10 @@ const bots = Object.fromEntries(
   botNames.map((name: string) => [
     name,
     // eslint-disable-next-line @typescript-eslint/no-var-requires
-    require(`./${name}`) as (arg0: {
+    require(`./${name}`) as ({
+      rtmClient: rtm,
+      webClient: slack,
+    }: {
       rtmClient: RTMClient;
       webClient: WebClient;
     }) => void,
