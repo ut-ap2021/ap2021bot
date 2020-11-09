@@ -10,6 +10,8 @@ const token = process.env.SLACK_BOT_TOKEN as string;
 const rtm = new RTMClient(token);
 const slack = new WebClient(token);
 
+const startupMessage = 'わいわい (起動音)';
+
 rtm.start().then(() => {
   console.log('ap2021bot successfully started!');
 });
@@ -20,7 +22,10 @@ const bots = Object.fromEntries(
   botNames.map((name: string) => [
     name,
     // eslint-disable-next-line @typescript-eslint/no-var-requires
-    require(`./${name}`) as (arg0: {
+    require(`./${name}`) as ({
+      rtmClient: rtm,
+      webClient: slack,
+    }: {
       rtmClient: RTMClient;
       webClient: WebClient;
     }) => void,
@@ -37,3 +42,8 @@ const startBots = async () => {
 };
 
 startBots();
+
+slack.chat.postMessage({
+  channel: process.env.CHANNEL_SANDBOX as string,
+  text: startupMessage,
+});
