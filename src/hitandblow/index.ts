@@ -163,8 +163,6 @@ module.exports = ({
       return;
     }
 
-    console.log(message);
-
     // game開始処理
     if (message.text.match(/^hitandblow( \d+)?$/)) {
       if (state.inGame) {
