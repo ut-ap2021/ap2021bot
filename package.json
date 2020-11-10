@@ -7,7 +7,7 @@
   "scripts": {
     "start": "ts-node src/index.ts",
     "dev": "nodemon -x ts-node -e js,ts src/index.ts -i \"*.json\"",
-    "test": "jest"
+    "test": "jest --verbose --coverage"
   },
   "repository": {
     "type": "git",
@@ -23,6 +23,7 @@
     "@types/jest": "^26.0.15",
     "@typescript-eslint/eslint-plugin": "^4.5.0",
     "@typescript-eslint/parser": "^4.5.0",
+    "codecov": "^3.8.1",
     "eslint": "^7.11.0",
     "eslint-config-prettier": "^6.13.0",
     "jest": "^26.6.3",
