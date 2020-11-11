@@ -108,7 +108,3 @@ dist
 
 # Mac OS .DS_Store
 .DS_Store
-
-# Ignore
-.eslintignore
-.prettierignore
