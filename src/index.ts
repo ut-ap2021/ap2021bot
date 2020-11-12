@@ -10,7 +10,7 @@ const token = process.env.SLACK_BOT_TOKEN as string;
 const rtm = new RTMClient(token);
 const slack = new WebClient(token);
 
-const botNames: string[] = ['hitandblow', 'emoji-notifier'];
+const botNames: string[] = ['hitandblow', 'emoji-notifier', 'channel-notifier'];
 
 const startupMessage = 'わいわい (起動音)';
 
