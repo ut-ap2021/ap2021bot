@@ -10,40 +10,54 @@ const token = process.env.SLACK_BOT_TOKEN as string;
 const rtm = new RTMClient(token);
 const slack = new WebClient(token);
 
-const startupMessage = 'わいわい (起動音)';
-
-rtm.start().then(() => {
-  console.log('ap2021bot successfully started!');
-});
-
 const botNames: string[] = ['hitandblow', 'emoji-notifier'];
 
-const bots = Object.fromEntries(
-  botNames.map((name: string) => [
-    name,
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    require(`./${name}`) as ({
-      rtmClient: rtm,
-      webClient: slack,
-    }: {
-      rtmClient: RTMClient;
-      webClient: WebClient;
-    }) => void,
-  ])
-);
+const startupMessage = 'わいわい (起動音)';
 
-const startBots = async () => {
-  await Promise.all(
-    Object.entries(bots).map(async ([name, startFunc]) => {
-      startFunc({ rtmClient: rtm, webClient: slack });
-      console.log(`bot "${name}" successfully started!`);
-    })
-  );
-};
+(async () => {
+  const bots = await (async () => {
+    const botsArray: [string, typeof import('./template')][] = [];
+    /*const botsArray: [
+      string,
+      ({
+        rtmClient: rtm,
+        webClient: slack,
+      }: {
+        rtmClient: RTMClient;
+        webClient: WebClient;
+      }) => void
+    ][] = [];*/
+    for (let i = 0; i < botNames.length; i++) {
+      const botFunc = await import(`./${botNames[i]}`);
+      /*const botFunc = (await import(`./${botNames[i]}`)) as ({
+        rtmClient: rtm,
+        webClient: slack,
+      }: {
+        rtmClient: RTMClient;
+        webClient: WebClient;
+      }) => void;*/
+      botsArray.push([botNames[i], botFunc]);
+    }
+    return Object.fromEntries(botsArray);
+  })();
 
-startBots();
+  const startBots = async () => {
+    await Promise.all(
+      Object.entries(bots).map(async ([name, bot]) => {
+        bot.default({ rtmClient: rtm, webClient: slack });
+        console.log(`bot "${name}" successfully started!`);
+      })
+    );
+  };
 
-slack.chat.postMessage({
-  channel: process.env.CHANNEL_SANDBOX as string,
-  text: startupMessage,
-});
+  startBots();
+
+  rtm.start().then(() => {
+    console.log('ap2021bot successfully started!');
+  });
+
+  slack.chat.postMessage({
+    channel: process.env.CHANNEL_SANDBOX as string,
+    text: startupMessage,
+  });
+})();

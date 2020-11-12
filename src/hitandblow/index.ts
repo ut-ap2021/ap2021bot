@@ -85,7 +85,7 @@ const answerLength2TimeLimit = (answerLength: number) => {
   return answerLength * 3 * 60 * 1000;
 };
 
-module.exports = ({
+export default ({
   rtmClient: rtm,
   webClient: slack,
 }: {
