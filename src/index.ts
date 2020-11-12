@@ -16,34 +16,48 @@ rtm.start().then(() => {
   console.log('ap2021bot successfully started!');
 });
 
-const botNames: string[] = ['hitandblow', 'emoji-notifier'];
+(async () => {
+  const botNames: string[] = ['hitandblow', 'emoji-notifier'];
 
-const bots = Object.fromEntries(
-  botNames.map((name: string) => [
-    name,
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    require(`./${name}`) as ({
-      rtmClient: rtm,
-      webClient: slack,
-    }: {
-      rtmClient: RTMClient;
-      webClient: WebClient;
-    }) => void,
-  ])
-);
+  const bots = await (async () => {
+    const botsArray: [string, typeof import('./template')][] = [];
+    /*const botsArray: [
+      string,
+      ({
+        rtmClient: rtm,
+        webClient: slack,
+      }: {
+        rtmClient: RTMClient;
+        webClient: WebClient;
+      }) => void
+    ][] = [];*/
+    for (let i = 0; i < botNames.length; i++) {
+      const botFunc = await import(`./${botNames[i]}`);
+      /*const botFunc = (await import(`./${botNames[i]}`)) as ({
+        rtmClient: rtm,
+        webClient: slack,
+      }: {
+        rtmClient: RTMClient;
+        webClient: WebClient;
+      }) => void;*/
+      botsArray.push([botNames[i], botFunc]);
+    }
+    return Object.fromEntries(botsArray);
+  })();
 
-const startBots = async () => {
-  await Promise.all(
-    Object.entries(bots).map(async ([name, startFunc]) => {
-      startFunc({ rtmClient: rtm, webClient: slack });
-      console.log(`bot "${name}" successfully started!`);
-    })
-  );
-};
+  const startBots = async () => {
+    await Promise.all(
+      Object.entries(bots).map(async ([name, bot]) => {
+        bot.default({ rtmClient: rtm, webClient: slack });
+        console.log(`bot "${name}" successfully started!`);
+      })
+    );
+  };
 
-startBots();
+  startBots();
 
-slack.chat.postMessage({
-  channel: process.env.CHANNEL_SANDBOX as string,
-  text: startupMessage,
-});
+  slack.chat.postMessage({
+    channel: process.env.CHANNEL_SANDBOX as string,
+    text: startupMessage,
+  });
+})();

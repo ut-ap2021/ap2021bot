@@ -3,7 +3,7 @@
 import { RTMClient } from '@slack/rtm-api';
 import { WebClient } from '@slack/web-api';
 
-module.exports = ({
+export default ({
   rtmClient: rtm,
   webClient: slack,
 }: {
