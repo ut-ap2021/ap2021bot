@@ -26,7 +26,7 @@ module.exports = ({
     } else if (emoji_data.subtype === 'remove') {
       await slack.chat.postMessage({
         text: `絵文字:${emoji_data.names[0]}:${
-          emoji_data.names.size > 1 ? 'とそのエイリアス' : ''
+          emoji_data.names.length > 1 ? 'とそのエイリアス' : ''
         }が削除されたよ:cry::pien::違憲::残念:`,
         channel: process.env.CHANNEL_SANDBOX as string,
         username: 'emoji-notifier',
