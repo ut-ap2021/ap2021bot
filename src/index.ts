@@ -10,15 +10,11 @@ const token = process.env.SLACK_BOT_TOKEN as string;
 const rtm = new RTMClient(token);
 const slack = new WebClient(token);
 
+const botNames: string[] = ['hitandblow', 'emoji-notifier'];
+
 const startupMessage = 'わいわい (起動音)';
 
-rtm.start().then(() => {
-  console.log('ap2021bot successfully started!');
-});
-
 (async () => {
-  const botNames: string[] = ['hitandblow', 'emoji-notifier'];
-
   const bots = await (async () => {
     const botsArray: [string, typeof import('./template')][] = [];
     /*const botsArray: [
@@ -55,6 +51,10 @@ rtm.start().then(() => {
   };
 
   startBots();
+
+  rtm.start().then(() => {
+    console.log('ap2021bot successfully started!');
+  });
 
   slack.chat.postMessage({
     channel: process.env.CHANNEL_SANDBOX as string,
