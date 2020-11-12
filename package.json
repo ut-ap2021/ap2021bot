@@ -7,7 +7,7 @@
   "scripts": {
     "start": "ts-node src/index.ts",
     "dev": "nodemon -x ts-node -e js,ts src/index.ts -i \"*.json\"",
-    "test": "jest"
+    "test": "jest --verbose --coverage"
   },
   "repository": {
     "type": "git",
@@ -21,25 +21,26 @@
   "homepage": "https://github.com/ut-ap2021/ap2021bot#readme",
   "devDependencies": {
     "@types/jest": "^26.0.15",
-    "@typescript-eslint/eslint-plugin": "^4.5.0",
-    "@typescript-eslint/parser": "^4.5.0",
-    "eslint": "^7.11.0",
-    "eslint-config-prettier": "^6.13.0",
+    "@typescript-eslint/eslint-plugin": "^4.7.0",
+    "@typescript-eslint/parser": "^4.7.0",
+    "codecov": "^3.8.1",
+    "eslint": "^7.13.0",
+    "eslint-config-prettier": "^6.15.0",
     "jest": "^26.6.3",
     "nodemon": "^2.0.6",
     "prettier": "^2.1.2",
-    "ts-jest": "^26.4.3"
+    "ts-jest": "^26.4.4"
   },
   "dependencies": {
     "@slack/rtm-api": "^5.0.5",
-    "@slack/web-api": "^5.12.0",
+    "@slack/web-api": "^5.13.0",
     "@types/common-tags": "^1.8.0",
-    "@types/lodash": "^4.14.164",
-    "@types/node": "^14.14.2",
+    "@types/lodash": "^4.14.165",
+    "@types/node": "^14.14.7",
     "common-tags": "^1.8.0",
     "dotenv": "^8.2.0",
     "lodash": "^4.17.20",
     "ts-node": "^9.0.0",
-    "typescript": "^4.0.3"
+    "typescript": "^4.0.5"
   }
 }

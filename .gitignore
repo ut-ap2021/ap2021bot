@@ -103,11 +103,8 @@ dist
 # TernJS port file
 .tern-port
 
-#VSCode settings folder
+# VSCode settings folder
 .vscode/
 
-#Mac OS .DS_Store
+# Mac OS .DS_Store
 .DS_Store
-
-#Eslint Ignore
-.eslintignore
