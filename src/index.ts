@@ -16,7 +16,7 @@ rtm.start().then(() => {
   console.log('ap2021bot successfully started!');
 });
 
-const botNames: string[] = ['hitandblow'];
+const botNames: string[] = ['hitandblow', 'emoji-notifier'];
 
 const bots = Object.fromEntries(
   botNames.map((name: string) => [
