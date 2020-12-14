@@ -35,12 +35,16 @@
     "@slack/rtm-api": "^5.0.5",
     "@slack/web-api": "^5.13.0",
     "@types/common-tags": "^1.8.0",
+    "@types/jsdom": "^16.2.5",
     "@types/lodash": "^4.14.165",
+    "@types/mongodb": "^3.6.3",
     "@types/node": "^14.14.7",
+    "axios": "^0.21.0",
     "common-tags": "^1.8.0",
     "dotenv": "^8.2.0",
-    "http": "0.0.1-security",
+    "jsdom": "^16.4.0",
     "lodash": "^4.17.20",
+    "mongodb": "^3.6.3",
     "ts-node": "^9.0.0",
     "typescript": "^4.0.5"
   }
