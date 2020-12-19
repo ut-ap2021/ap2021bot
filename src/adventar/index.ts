@@ -3,7 +3,6 @@ import { WebClient } from '@slack/web-api';
 import { stripIndent } from 'common-tags';
 import { JSDOM } from 'jsdom';
 import assert from 'assert';
-import axios from 'axios';
 import mongodb from 'mongodb';
 
 interface AdventarArticle {
