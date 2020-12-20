@@ -26,35 +26,35 @@ const fetchAdventarSnapshot = async (pageID: number) => {
     assert(matchedYear);
     return parseInt(matchedYear[1]);
   })();
+
   const entryList = Array<AdventarArticle | null>(26).fill(null);
 
-  Array.from(
-    document.getElementsByClassName('EntryList')[0].childNodes
-  ).forEach((entry: ChildNode) => {
-    const elemEntry = entry as HTMLElement;
-    const elemHead = elemEntry.getElementsByClassName('head')[0];
-    const elemArticle = elemEntry.getElementsByClassName('article')[0];
-    const date = parseInt(
-      elemHead.getElementsByClassName('date')[0].innerHTML.substr(3),
-      10
-    );
-    const user = {
-      uid: parseInt(
-        (elemHead
-          .getElementsByTagName('a')[0]
-          .getAttribute('href') as string).substr(7)
-      ),
-      name: elemHead.getElementsByTagName('a')[0].innerHTML,
-      iconURI: elemHead
-        .getElementsByTagName('img')[0]
-        .getAttribute('src') as string,
-    };
-    const articleURI = elemArticle
-      ? elemArticle.getElementsByTagName('a')[0].getAttribute('href')
-      : null;
+  Array.from(document.getElementsByClassName('EntryList')[0].children).forEach(
+    (entry) => {
+      const elemHead = entry.getElementsByClassName('head')[0];
+      const elemArticle = entry.getElementsByClassName('article')[0];
+      const date = parseInt(
+        elemHead.getElementsByClassName('date')[0].innerHTML.substr(3),
+        10
+      );
+      const user = {
+        uid: parseInt(
+          (elemHead
+            .getElementsByTagName('a')[0]
+            .getAttribute('href') as string).substr(7)
+        ),
+        name: elemHead.getElementsByTagName('a')[0].innerHTML,
+        iconURI: elemHead
+          .getElementsByTagName('img')[0]
+          .getAttribute('src') as string,
+      };
+      const articleURI = elemArticle
+        ? elemArticle.getElementsByTagName('a')[0].getAttribute('href')
+        : null;
 
-    entryList[date] = { user, articleURI };
-  });
+      entryList[date] = { user, articleURI };
+    }
+  );
 
   return {
     title,
@@ -65,24 +65,6 @@ const fetchAdventarSnapshot = async (pageID: number) => {
 };
 
 const MongoClient = mongodb.MongoClient;
-
-/*
-const testMongo = async () => {
-  require('dotenv').config();
-  const client = await MongoClient.connect(process.env.MONGODB_URI as string, {
-    useUnifiedTopology: true,
-  });
-  const db = client.db('adventar');
-  console.log('db connected');
-  console.log(await db.collection('adventar_snapshots').findOne({ a: 'val' }));
-  if (await db.collection('adventar_snapshots').findOne({})) {
-    console.log('has data');
-  }
-  client.close();
-};
-
-testMongo();
-*/
 
 export default async ({
   rtmClient: rtm,
@@ -193,7 +175,7 @@ export default async ({
             postMessage('終了したアドベントカレンダーは登録できないよ:cry:');
             return;
           } else {
-            clSnapshots.insertOne(ss);
+            await clSnapshots.insertOne(ss);
             hasSnapshot = true;
             postMessage(
               `『<https://adventar.org/calendars/${ss.pageID}|*${ss.title}*>』を登録したよ:demand_2:`
