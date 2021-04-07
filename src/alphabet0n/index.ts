@@ -1,0 +1,2 @@
+import { wordlist } from './wordlist';
+
